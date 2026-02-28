@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intercomunicador</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #111;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+
+        .circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: #222;
+            border: 4px solid #4CAF50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 20px rgba(76, 175, 80, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+            }
+        }
+
+        #status {
+            margin-top: 20px;
+            color: #aaa;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="circle">🎙️</div>
+    <div id="status">Iniciando sistema...</div>
+    <p style="color:#555; font-size:0.8rem; margin-top:10px;">(El sistema arranca sin botones tras dar permiso de
+        micrófono)</p>
+
+    <!-- Audio reproductor oculto -->
+    <audio id="remoteAudio" autoplay></audio>
+
+    <script src="js/webrtc.js"></script>
+</body>
+
+</html>
