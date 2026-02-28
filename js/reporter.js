@@ -4,6 +4,7 @@ const MASTER_ID = 'l-prompter-radio-master-id';
 let peer;
 let localStream;
 let currentCall;
+let currentConn;
 let isConnecting = false;
 
 // Generate a random string to ID this mobile in the central Radio
@@ -16,6 +17,8 @@ const indicator = document.getElementById('onAirIndicator');
 const audioEl = document.getElementById('returnAudio');
 const returnVol = document.getElementById('returnVolume');
 const toggleMicBtn = document.getElementById('toggleMicBtn');
+const messageOverlay = document.getElementById('messageOverlay');
+let overlayTimeout;
 
 let isMicOpen = true;
 
@@ -77,30 +80,55 @@ function attemptCall() {
     if (isConnecting || currentCall) return;
 
     isConnecting = true;
-    setUIState('warning', 'MARCANDO AL STUDY...', 'Estableciendo P2P con el Master.');
+    setUIState('warning', 'MARCANDO AL STUDIO...', 'Estableciendo enlace con el Master.');
 
+    // Connect audio channel
     const call = peer.call(MASTER_ID, localStream);
 
+    // Connect data channel
+    const conn = peer.connect(MASTER_ID);
+
     if (call) {
-        setupCallEventHandlers(call);
+        setupCallEventHandlers(call, conn);
     } else {
         isConnecting = false;
         setTimeout(attemptCall, 3000);
     }
 }
 
-function setupCallEventHandlers(call) {
+function setupCallEventHandlers(call, conn) {
     currentCall = call;
+    currentConn = conn;
+
+    // Handle incoming commands on Data Channel
+    if (conn) {
+        conn.on('open', () => {
+            console.log('Canal de datos establecido');
+        });
+
+        conn.on('data', (data) => {
+            if (data.type === 'tally') {
+                if (data.status) {
+                    setUIState('live', '¡AL AIRE! HABLA', 'El productor te ha ponchado.');
+                } else {
+                    setUIState('standby', 'EN ESPERA', 'Estudio te escucha, pero NO sales al aire.');
+                }
+            } else if (data.type === 'msg') {
+                showCucarachaMessage(data.text);
+            }
+        });
+    }
 
     call.on('stream', (remoteStream) => {
         isConnecting = false;
         audioEl.srcObject = remoteStream;
 
         audioEl.play().then(() => {
-            setUIState('live', '¡AL AIRE!', 'Estás transmitiendo en vivo.');
+            // Default to standby unless tally says otherwise
+            setUIState('standby', 'ENLACE ESTABLECIDO', 'En espera de ser ponchado al aire.');
         }).catch(e => {
-            setUIState('live', '¡AL AIRE!', 'Toca la pantalla para oir el retorno');
-            document.body.onclick = () => audioEl.play();
+            setUIState('warning', 'ENLACE ESTABLECIDO', 'Toca la pantalla para activar el audio');
+            document.body.onclick = () => { audioEl.play(); setUIState('standby', 'EN ESPERA', 'Conectado al estudio.'); };
         });
     });
 
@@ -108,9 +136,22 @@ function setupCallEventHandlers(call) {
     call.on('error', handleDisconnect);
 }
 
+function showCucarachaMessage(text) {
+    messageOverlay.innerText = text;
+    messageOverlay.classList.add('show');
+
+    // Auto hide after 8 seconds
+    clearTimeout(overlayTimeout);
+    overlayTimeout = setTimeout(() => {
+        messageOverlay.classList.remove('show');
+    }, 8000);
+}
+
 function handleDisconnect() {
     setUIState('danger', 'CAÍDOS DEL SISTEMA', 'La llamada se cortó. Volviendo a marcar...');
     currentCall = null;
+    if (currentConn) currentConn.close();
+    currentConn = null;
     isConnecting = false;
     audioEl.srcObject = null;
 

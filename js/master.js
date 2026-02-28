@@ -14,7 +14,7 @@ const toggleReturnBtn = document.getElementById('toggleReturnBtn');
 const reportersGrid = document.getElementById('reportersGrid');
 const masterCanvas = document.getElementById('masterVuMeter');
 
-let isReturnMuted = true;
+let isReturnMuted = false;
 
 async function init() {
     try {
@@ -91,6 +91,20 @@ function initializePeer() {
         statusEl.innerText = 'Master Online (Escuchando)';
     });
 
+    peer.on('connection', (conn) => {
+        // Almacenar el data channel cuando el corresponsal se conecta para texto/comandos
+        const peerId = conn.peer;
+        if (!connectedPeers.has(peerId)) {
+            connectedPeers.set(peerId, { conn: conn });
+        } else {
+            connectedPeers.get(peerId).conn = conn;
+        }
+
+        conn.on('data', (data) => {
+            console.log('Mensaje del movil:', data);
+        });
+    });
+
     peer.on('call', (call) => {
         console.log('Incoming call from', call.peer);
         // Answer automatically with the return audio
@@ -119,8 +133,8 @@ function setupReporterCard(call) {
     const shortName = peerId.split('-')[1] || peerId.substring(0, 6);
 
     // If already exists, do not duplicate UI, just replace call
-    if (connectedPeers.has(peerId)) {
-        connectedPeers.get(peerId).call.close();
+    if (connectedPeers.has(peerId) && connectedPeers.get(peerId).card) {
+        if (connectedPeers.get(peerId).call) connectedPeers.get(peerId).call.close();
         document.getElementById(`card-${peerId}`)?.remove();
     }
 
@@ -131,15 +145,28 @@ function setupReporterCard(call) {
     card.innerHTML = `
         <div class="card-header">
             <h3>Movil: ${shortName}</h3>
-            <span class="pulse-indicator live" id="live-${peerId}">Conectando</span>
+            <span class="pulse-indicator standby" id="live-${peerId}">EN ESPERA</span>
         </div>
+        
+        <div class="card-tally">
+            <span>Señal Al Aire:</span>
+            <button class="tally-toggle-btn" id="tallyBtn-${peerId}">PONCHAR</button>
+        </div>
+
         <div class="vu-meter-container">
             <canvas class="vu-meter" id="canvas-${peerId}" width="200" height="20"></canvas>
         </div>
+        
         <div class="controls">
             <input type="range" class="vol-slider" id="vol-${peerId}" min="0" max="1" step="0.05" value="1">
             <button class="mute-btn control-btn danger" id="mute-${peerId}">SILENCIAR</button>
         </div>
+        
+        <div class="cucaracha-chat">
+            <input type="text" id="chatInput-${peerId}" placeholder="Mensaje interno...">
+            <button id="chatSend-${peerId}">Enviar</button>
+        </div>
+
         <!-- Hidden Audio Element -->
         <audio id="audio-${peerId}" autoplay></audio>
     `;
@@ -150,13 +177,16 @@ function setupReporterCard(call) {
     const muteBtn = document.getElementById(`mute-${peerId}`);
     const liveTick = document.getElementById(`live-${peerId}`);
     const canvas = document.getElementById(`canvas-${peerId}`);
+    const tallyBtn = document.getElementById(`tallyBtn-${peerId}`);
+    const chatInput = document.getElementById(`chatInput-${peerId}`);
+    const chatSend = document.getElementById(`chatSend-${peerId}`);
 
     let reporterAnalyser = null;
     let isMuted = false;
+    let isTallyLive = false;
 
     // Handle incoming stream
     call.on('stream', (remoteStream) => {
-        liveTick.innerText = 'EN EL AIRE';
         audioEl.srcObject = remoteStream;
 
         // Visualizer Setup via Web Audio API
@@ -192,7 +222,40 @@ function setupReporterCard(call) {
         }
     };
 
-    connectedPeers.set(peerId, { call, card });
+    tallyBtn.onclick = () => {
+        const peerData = connectedPeers.get(peerId);
+        isTallyLive = !isTallyLive;
+
+        tallyBtn.innerText = isTallyLive ? 'AL AIRE' : 'PONCHAR';
+        tallyBtn.className = isTallyLive ? 'tally-toggle-btn active' : 'tally-toggle-btn';
+        liveTick.className = isTallyLive ? 'pulse-indicator live' : 'pulse-indicator standby';
+        liveTick.innerText = isTallyLive ? 'EN EL AIRE' : 'EN ESPERA';
+
+        if (peerData && peerData.conn && peerData.conn.open) {
+            peerData.conn.send({ type: 'tally', status: isTallyLive });
+        }
+    };
+
+    chatSend.onclick = () => {
+        const text = chatInput.value.trim();
+        if (!text) return;
+        const peerData = connectedPeers.get(peerId);
+        if (peerData && peerData.conn && peerData.conn.open) {
+            peerData.conn.send({ type: 'msg', text: text });
+            chatInput.value = ''; // clear input
+        } else {
+            alert('El canal de datos no está listo.');
+        }
+    };
+    chatInput.onkeypress = (e) => { if (e.key === 'Enter') chatSend.onclick(); };
+
+    // Update or Insert
+    if (connectedPeers.has(peerId)) {
+        connectedPeers.get(peerId).call = call;
+        connectedPeers.get(peerId).card = card;
+    } else {
+        connectedPeers.set(peerId, { call, card });
+    }
 }
 
 function removeReporter(peerId, card) {
