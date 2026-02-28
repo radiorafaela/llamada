@@ -1,16 +1,25 @@
 // js/reporter.js
 
-const MASTER_ID = 'l-prompter-radio-master-id';
+// The Master ID is derived from the session password (must match what the Master used).
+let MASTER_ID;
 let peer;
 let localStream;
 let currentCall;
 let currentConn;
 let isConnecting = false;
+let myReporterId;
+let myReporterName;
 
-// Generate a random string to ID this mobile in the central Radio
-const myReporterId = 'movil-' + Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+// HTML Elements (login)
+const loginOverlay = document.getElementById('loginOverlay');
+const reporterLoginBtn = document.getElementById('reporterLoginBtn');
+const reporterNameInput = document.getElementById('reporterName');
+const reporterPasswordInput = document.getElementById('reporterPassword');
+const reporterMain = document.getElementById('reporterMain');
+const reporterNameDisplay = document.getElementById('reporterNameDisplay');
+const reporterLogoutBtn = document.getElementById('reporterLogoutBtn');
 
-// UI Elements
+// HTML Elements (main)
 const statusText = document.getElementById('connectionStatus');
 const connectionDetail = document.getElementById('connectionDetail');
 const indicator = document.getElementById('onAirIndicator');
@@ -21,6 +30,64 @@ const messageOverlay = document.getElementById('messageOverlay');
 let overlayTimeout;
 
 let isMicOpen = true;
+
+// === SECURITY LAYER ===
+function generateMasterId(password) {
+    let hash = 5381;
+    for (let i = 0; i < password.length; i++) {
+        hash = ((hash << 5) + hash) + password.charCodeAt(i);
+        hash |= 0;
+    }
+    return 'lpr-master-' + Math.abs(hash).toString(36);
+}
+
+function handleLogin() {
+    const name = reporterNameInput.value.trim();
+    const password = reporterPasswordInput.value.trim();
+
+    if (!name) {
+        reporterNameInput.style.borderColor = 'red';
+        reporterNameInput.placeholder = 'Escribe tu nombre!';
+        return;
+    }
+    if (!password) {
+        reporterPasswordInput.style.borderColor = 'red';
+        reporterPasswordInput.placeholder = 'Escribe la contraseña!';
+        return;
+    }
+
+    // Save to LocalStorage for next time (auto-login)
+    localStorage.setItem('lpr_name', name);
+    localStorage.setItem('lpr_pass', password);
+
+    startSession(name, password);
+}
+
+function startSession(name, password) {
+    myReporterName = name;
+    MASTER_ID = generateMasterId(password);
+    // Random ID for this reporter: uses name slug + digits for clarity
+    const nameSlug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').substring(0, 12);
+    myReporterId = 'movil-' + nameSlug + '-' + Math.floor(Math.random() * 999);
+
+    // Show main UI
+    loginOverlay.style.display = 'none';
+    reporterMain.style.display = 'flex';
+    reporterNameDisplay.innerText = name;
+    init();
+}
+
+reporterLogoutBtn.onclick = () => {
+    localStorage.removeItem('lpr_name');
+    localStorage.removeItem('lpr_pass');
+    if (peer) peer.destroy();
+    if (localStream) localStream.getTracks().forEach(t => t.stop());
+    location.reload();
+};
+
+reporterLoginBtn.onclick = handleLogin;
+reporterPasswordInput.onkeypress = (e) => { if (e.key === 'Enter') handleLogin(); };
+reporterNameInput.onkeypress = (e) => { if (e.key === 'Enter') reporterPasswordInput.focus(); };
 
 async function init() {
     try {
@@ -193,7 +260,16 @@ toggleMicBtn.onclick = () => {
 };
 
 window.onload = () => {
-    // Awake audio context
-    document.body.addEventListener('click', () => { if (audioEl.paused) audioEl.play(); }, { once: true });
-    init();
+    // Awake audio context on any click
+    document.body.addEventListener('click', () => { if (audioEl && audioEl.paused) audioEl.play(); }, { once: true });
+
+    // === AUTO-LOGIN from LocalStorage ===
+    const savedName = localStorage.getItem('lpr_name');
+    const savedPass = localStorage.getItem('lpr_pass');
+    if (savedName && savedPass) {
+        // Pre-fill and auto-login
+        reporterNameInput.value = savedName;
+        reporterPasswordInput.value = savedPass;
+        startSession(savedName, savedPass);
+    }
 };

@@ -10,13 +10,29 @@
 
 <body class="reporter-body">
 
-    <div class="reporter-container glass-panel">
+    <!-- LOGIN OVERLAY - Se oculta al autenticar (o si hay datos en localStorage) -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-box glass-panel">
+            <h2>📻 Corresponsal</h2>
+            <p>Ingresar al estudio de radio.</p>
+            <input type="text" id="reporterName" class="glass-input login-input"
+                placeholder="Tu nombre (ej: Juan Pérez)" autocomplete="off">
+            <input type="password" id="reporterPassword" class="glass-input login-input"
+                placeholder="Contraseña de sesión...">
+            <button id="reporterLoginBtn" class="big-btn success">CONECTAR AL ESTUDIO</button>
+            <p class="login-hint">Pedí la contraseña al operador técnico.</p>
+        </div>
+    </div>
+
+    <div class="reporter-container glass-panel" id="reporterMain" style="display:none;">
         <div id="messageOverlay" class="message-overlay">
             Mensaje de Producción
         </div>
 
         <div class="reporter-header">
-            <h2>Corresponsal</h2>
+            <h2 id="reporterNameDisplay">Corresponsal</h2>
+            <button id="reporterLogoutBtn" class="control-btn"
+                style="background:#333;font-size:0.75rem;padding:4px 8px;">Salir</button>
         </div>
 
         <div class="status-circle" id="onAirIndicator">

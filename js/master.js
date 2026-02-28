@@ -1,13 +1,23 @@
 // js/master.js
 
-const MASTER_ID = 'l-prompter-radio-master-id';
+// The Master ID is derived from the session password.
+// This means only people with the same password can find and connect to this Master.
+let MASTER_ID;
 let peer;
 let localStream;
 let audioContext;
 let masterAnalyser;
-const connectedPeers = new Map(); // Store call objects and their UI elements
+const connectedPeers = new Map();
 
-// HTML Elements
+// HTML Elements (login)
+const loginOverlay = document.getElementById('loginOverlay');
+const masterLoginBtn = document.getElementById('masterLoginBtn');
+const masterPasswordInput = document.getElementById('masterPassword');
+const masterHeader = document.getElementById('masterHeader');
+const masterMain = document.getElementById('masterMain');
+const logoutBtn = document.getElementById('logoutBtn');
+
+// HTML Elements (main)
 const statusEl = document.getElementById('master-status');
 const audioSourceSelect = document.getElementById('audioSource');
 const toggleReturnBtn = document.getElementById('toggleReturnBtn');
@@ -15,6 +25,42 @@ const reportersGrid = document.getElementById('reportersGrid');
 const masterCanvas = document.getElementById('masterVuMeter');
 
 let isReturnMuted = false;
+
+// === SECURITY LAYER ===
+function generateMasterId(password) {
+    // Create a deterministic but non-obvious ID from the password string.
+    // Anyone with the same password will derive the same ID.
+    let hash = 5381;
+    for (let i = 0; i < password.length; i++) {
+        hash = ((hash << 5) + hash) + password.charCodeAt(i);
+        hash |= 0; // Convert to 32bit integer
+    }
+    return 'lpr-master-' + Math.abs(hash).toString(36);
+}
+
+function handleLogin() {
+    const password = masterPasswordInput.value.trim();
+    if (!password) {
+        masterPasswordInput.style.borderColor = 'red';
+        masterPasswordInput.placeholder = 'Escribe una contraseña!';
+        return;
+    }
+    MASTER_ID = generateMasterId(password);
+    // Show the main UI
+    loginOverlay.style.display = 'none';
+    masterHeader.style.display = 'flex';
+    masterMain.style.display = 'block';
+    init();
+}
+
+logoutBtn.onclick = () => {
+    if (peer) peer.destroy();
+    if (localStream) localStream.getTracks().forEach(t => t.stop());
+    location.reload();
+};
+
+masterLoginBtn.onclick = handleLogin;
+masterPasswordInput.onkeypress = (e) => { if (e.key === 'Enter') handleLogin(); };
 
 async function init() {
     try {
@@ -329,5 +375,5 @@ function setupMasterVU() {
 }
 
 window.onload = () => {
-    init();
+    // Do nothing until the user logs in. Login events are bound above.
 };

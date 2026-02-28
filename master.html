@@ -9,7 +9,20 @@
 </head>
 
 <body class="master-body">
-    <header class="master-header glass-panel">
+
+    <!-- LOGIN OVERLAY - Se oculta al autenticar -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-box glass-panel">
+            <h2>🎛️ Consola Master</h2>
+            <p>Ingresá la contraseña de sesión para iniciar.</p>
+            <input type="password" id="masterPassword" class="glass-input login-input"
+                placeholder="Contraseña de sesión..." autofocus>
+            <button id="masterLoginBtn" class="big-btn success">INICIAR MASTER</button>
+            <p class="login-hint">Esta contraseña debe coincidir con la que usen los corresponsales.</p>
+        </div>
+    </div>
+
+    <header class="master-header glass-panel" style="display:none;" id="masterHeader">
         <div class="header-left">
             <h1>🎛️ Radio Master Console</h1>
             <span id="master-status" class="status-badge warning">Conectando Servidor...</span>
@@ -22,10 +35,11 @@
                 </select>
             </div>
             <button id="toggleReturnBtn" class="control-btn live-btn">Retorno: EN VIVO (AL AIRE)</button>
+            <button id="logoutBtn" class="control-btn" style="background:#333;">Cerrar Sesión</button>
         </div>
     </header>
 
-    <main class="dashboard">
+    <main class="dashboard" style="display:none;" id="masterMain">
         <!-- Tarjeta del Retorno (El audio de la Radio) -->
         <section class="master-audio-section glass-panel">
             <div class="vu-meter-container large">
@@ -35,24 +49,7 @@
         </section>
 
         <!-- Grid de Corresponsales -->
-        <div class="reporters-grid" id="reportersGrid">
-            <!-- La lista de corresponsales se llenará aquí con JS -->
-            <!-- Plantilla Ejemplo 
-            <div class="reporter-card glass-panel" id="peer-xxx">
-                <div class="card-header">
-                    <h3>Movil 1</h3>
-                    <span class="pulse-indicator live">LIVE</span>
-                </div>
-                <div class="vu-meter-container">
-                    <canvas class="vu-meter" width="200" height="20"></canvas>
-                </div>
-                <div class="controls">
-                    <input type="range" class="vol-slider" min="0" max="1" step="0.05" value="1">
-                    <button class="mute-btn">MUTE</button>
-                </div>
-            </div>
-            -->
-        </div>
+        <div class="reporters-grid" id="reportersGrid"></div>
     </main>
 
     <!-- Usamos PeerJS y nuestra logica -->
