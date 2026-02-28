@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Console - Broadcast</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="master-body">
+    <header class="master-header glass-panel">
+        <div class="header-left">
+            <h1>🎛️ Radio Master Console</h1>
+            <span id="master-status" class="status-badge warning">Conectando Servidor...</span>
+        </div>
+        <div class="header-right">
+            <div class="device-selector">
+                <label for="audioSource">Micrófono (Retorno):</label>
+                <select id="audioSource" class="glass-input">
+                    <option value="">Cargando dispositivos...</option>
+                </select>
+            </div>
+            <button id="toggleReturnBtn" class="control-btn danger">Retorno: MUTED</button>
+        </div>
+    </header>
+
+    <main class="dashboard">
+        <!-- Tarjeta del Retorno (El audio de la Radio) -->
+        <section class="master-audio-section glass-panel">
+            <div class="vu-meter-container large">
+                <canvas id="masterVuMeter" width="300" height="30"></canvas>
+            </div>
+            <p class="section-hint">Nivel de Audio (Retorno hacia los móviles)</p>
+        </section>
+
+        <!-- Grid de Corresponsales -->
+        <div class="reporters-grid" id="reportersGrid">
+            <!-- La lista de corresponsales se llenará aquí con JS -->
+            <!-- Plantilla Ejemplo 
+            <div class="reporter-card glass-panel" id="peer-xxx">
+                <div class="card-header">
+                    <h3>Movil 1</h3>
+                    <span class="pulse-indicator live">LIVE</span>
+                </div>
+                <div class="vu-meter-container">
+                    <canvas class="vu-meter" width="200" height="20"></canvas>
+                </div>
+                <div class="controls">
+                    <input type="range" class="vol-slider" min="0" max="1" step="0.05" value="1">
+                    <button class="mute-btn">MUTE</button>
+                </div>
+            </div>
+            -->
+        </div>
+    </main>
+
+    <!-- Usamos PeerJS y nuestra logica -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="js/master.js"></script>
+</body>
+
+</html>
